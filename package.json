@@ -1,0 +1,32 @@
+{
+  "name": "@orbit-love/youtube",
+  "version": "0.1.0",
+  "description": "Add YouTube interactions into Orbit workspaces",
+  "main": "./src/index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/orbit-love/community-js-youtube-orbit.git"
+  },
+  "author": "Kevin Lewis",
+  "keywords": [
+    "orbit",
+    "youtube",
+    "comments",
+    "integration"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/orbit-love/community-js-youtube-orbit/issues"
+  },
+  "homepage": "https://github.com/orbit-love/community-js-youtube-orbit#readme",
+  "dependencies": {
+    "axios": "^0.21.1",
+    "dotenv": "^9.0.2"
+  }
+}
