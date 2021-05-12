@@ -27,6 +27,9 @@
   "homepage": "https://github.com/orbit-love/community-js-youtube-orbit#readme",
   "dependencies": {
     "axios": "^0.21.1",
-    "dotenv": "^9.0.2"
+    "dotenv": "^9.0.2",
+    "moment": "^2.29.1",
+    "popyt": "^5.0.0",
+    "querystring": "^0.2.1"
   }
 }
