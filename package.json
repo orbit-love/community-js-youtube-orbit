@@ -9,6 +9,7 @@
   "scripts": {
     "test": "jest"
   },
+  "bin": "./src/bin.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/orbit-love/community-js-youtube-orbit.git"
@@ -30,6 +31,7 @@
     "dotenv": "^9.0.2",
     "moment": "^2.29.1",
     "popyt": "^5.0.0",
-    "querystring": "^0.2.1"
+    "querystring": "^0.2.1",
+    "yargs": "^17.0.1"
   }
 }
