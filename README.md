@@ -1,4 +1,4 @@
-# PLATFORM to Orbit Workspace
+# YouTube to Orbit Workspace
 
 ![Build Status](https://github.com/orbit-love/community-js-youtube-orbit/workflows/CI/badge.svg)
 [![npm version](https://badge.fury.io/js/%40orbit-love%2Fyoutube.svg)](https://badge.fury.io/js/%40orbit-love%2Fyoutube)
