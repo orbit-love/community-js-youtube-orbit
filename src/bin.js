@@ -26,7 +26,7 @@ async function main() {
     const videos = await orbitYouTube.getComments({ channelId: args.channel, hours })
     console.log(`Fetched ${videos.length} comments from the provided timeframe`)
     const comments = await orbitYouTube.prepareComments(videos)
-    console.log(`Comments are prepared as Orbit activities`)
+    console.log(`Comments are prepared as Orbit activities. Sending them off now...`)
     const response = await orbitYouTube.addActivities(comments)
     console.log(response) // "Added n activities to the workspace-id Orbit workspace"
 }
