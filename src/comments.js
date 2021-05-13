@@ -36,13 +36,20 @@ const getCommentsFromVideos = (youtube, videos) => {
 }
 
 const filterOutOldComments = (comments, hours) => {
-    return comments.filter(comment => {
-        let old = moment().diff(moment(comment.datePublished), 'hours') > hours
-        return !old
+    return new Promise((resolve, reject) => {
+        try {
+            const filtered = comments.filter(comment => {
+                let old = moment().diff(moment(comment.datePublished), 'hours') > hours
+                return !old
+            })
+            resolve(filtered)
+        } catch(error) {
+            reject(error)
+        }
     })
 }
 
-const get = async (youtube, options) => {
+const get = (youtube, options) => {
     return new Promise(async (resolve, reject) => {
         try {
             if(!options) throw new Error('You must provide an options object')

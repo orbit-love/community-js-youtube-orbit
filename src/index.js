@@ -7,10 +7,12 @@ const BASE_URL='https://app.orbit.love/api/v1'
 class OrbitYouTube {
     constructor(orbitWorkspaceId, orbitApiKey, ytApiKey, ytChannelId) {
         this.credentials = this.setCredentials(orbitWorkspaceId, orbitApiKey, ytApiKey, ytChannelId)
-        this.youtube = new YouTube(this.credentials.ytApiKey)
+        this.youtube = new YouTube(this.credentials.ytApiKey, undefined, {
+            cache: false
+        })
     }
 
-    setCredentials(orbitWorkspaceId, orbitApiKey, ytApiKey, ytChannelId) {
+    setCredentials(orbitWorkspaceId, orbitApiKey, ytApiKey) {
         if(!(orbitWorkspaceId || process.env.ORBIT_WORKSPACE_ID)) throw new Error('You must provide an Orbit Workspace ID or set an ORBIT_WORKSPACE_ID environment variable')
         if(!(orbitApiKey || process.env.ORBIT_API_KEY)) throw new Error('You must provide an Orbit API Key or set an ORBIT_API_KEY environment variable')
         if(!(ytApiKey || process.env.YOUTUBE_API_KEY)) throw new Error('You must provide a YouTube API Key or set a YOUTUBE_API_KEY environment variable')
@@ -21,11 +23,12 @@ class OrbitYouTube {
         }
     }
 
-    getComments(options) {
+    async getComments(options) {
         return new Promise(async (resolve, reject) => {
             try {
                 const { channelId, hours } = options
-                resolve(await comments.get(this.youtube, { channelId, hours }))
+                const newComments = await comments.get(this.youtube, { channelId, hours })
+                resolve(newComments)
             } catch(error) {
                 reject(error)
             }
@@ -36,7 +39,8 @@ class OrbitYouTube {
     prepareComments(list) {
         return new Promise(async (resolve, reject) => {
             try {
-                resolve(comments.prepare(list))
+                const prepared = comments.prepare(list)
+                resolve(prepared)
             } catch(error) {
                 reject(error)
             }

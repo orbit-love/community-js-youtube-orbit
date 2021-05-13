@@ -31,6 +31,16 @@ The application requires the following environment variables:
 | `ORBIT_API_KEY` | API key for Orbit | Found in `Account Settings` in your Orbit workspace
 | `ORBIT_WORKSPACE_ID` | ID for your Orbit workspace | Last part of the Orbit workspace URL, i.e. `https://app.orbit.love/my-workspace`, the ID is `my-workspace`
 
+## Notes about quota
+
+Please take a moment to read the [quota usage](https://developers.google.com/youtube/v3/getting-started#quota) section of the YouTube Data API documentation. Per request this application:
+
+- makes one list channel request
+- makes one list videos request for every 50 videos on your channel
+- makes one list commentThread request for every video with at least one comment
+
+This should be fine for a majority of channels, but if you are concerned you will exceed the quota follow the provided guide on how to request a quota increase.
+
 ## Package Usage
 
 Install the package with the following command
