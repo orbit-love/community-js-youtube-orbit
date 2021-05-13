@@ -81,16 +81,22 @@ const orbitYouTube = new OrbitYouTube()
 To use this package you do not need to install it, but will need Node.js installed on your machine.
 
 ```
-npx @orbit-love/youtube --comments --channel=id
+npx @orbit-love/youtube --comments
 ```
 
 By default this will get the last 24 hours worth of activity, but this can be explicitly overridden:
 
 ```
-npx @orbit-love/youtube --comments --channel=id --hours=24
+npx @orbit-love/youtube --comments--hours=24
 ```
 
-To use the CLI you must have the following environment variables set: `ORBIT_WORKSPACE_ID`, `ORBIT_API_KEY`, `YOUTUBE_API_KEY`, and `YOUTUBE_CHANNEL_ID`.
+If you have set the `YOUTUBE_CHANNEL_ID` environment variable we will use this. If you want to be explicit you can provide it explicitly:
+
+```
+npx @orbit-love/youtube --comments --channel=id
+```
+
+To use the CLI you must have the following environment variables set: `ORBIT_WORKSPACE_ID`, `ORBIT_API_KEY`, `YOUTUBE_API_KEY`.
 
 ## GitHub Actions Automation Setup
 
