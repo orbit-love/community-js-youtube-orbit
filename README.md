@@ -89,7 +89,7 @@ npx @orbit-love/youtube --comments
 By default this will get the last 24 hours worth of activity, but this can be explicitly overridden:
 
 ```
-npx @orbit-love/youtube --comments--hours=24
+npx @orbit-love/youtube --comments --hours=24
 ```
 
 If you have set the `YOUTUBE_CHANNEL_ID` environment variable we will use this. If you want to be explicit you can provide it explicitly:
