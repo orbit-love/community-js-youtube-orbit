@@ -1,6 +1,6 @@
 {
   "name": "@orbit-love/youtube",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Add YouTube interactions into Orbit workspaces",
   "main": "./src/index.js",
   "directories": {
