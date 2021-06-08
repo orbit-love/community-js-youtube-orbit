@@ -74,6 +74,7 @@ const prepare = comments => {
                 link: comment.url,
                 link_text: 'See comment on YouTube',
                 title: `Commented on ${comment.videoTitle}`,
+                tags: ['channel:youtube'],
                 activity_type: 'youtube:comment',
                 key: `youtube-comment-${comment.id}`,
                 occurred_at: new Date(comment.datePublished),

@@ -6,6 +6,8 @@
 
 This is a JavaScript package that can be used to integrate YouTube comments from videos uploaded to a specified channel into your organization's Orbit workspace.
 
+![](docs/activity.png)
+
 |<p align="left">:sparkles:</p> This is a *community project*. The Orbit team does its best to maintain it and keep it up to date with any recent API changes.<br/><br/>We welcome community contributions to make sure that it stays current. <p align="right">:sparkles:</p>|
 |-----------------------------------------|
 

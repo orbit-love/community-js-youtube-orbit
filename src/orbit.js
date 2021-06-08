@@ -24,7 +24,7 @@ const addActivities = (activities, options) => {
                         if(result.reason.response.status == 422 && result.reason.response.data.errors.key) {
                             stats.duplicates++
                         } else {
-                            throw new Error(result.reason.response.data.errors)
+                            throw new Error(result.reason.response)
                         }
                     } else {
                         stats.added++
