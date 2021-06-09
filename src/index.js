@@ -1,15 +1,13 @@
+const pkg = require('../package.json')
 const YouTube = require('popyt').YouTube
 const comments = require('./comments')
-const orbit = require('./orbit')
-
-const BASE_URL='https://app.orbit.love/api/v1'
+const OrbitActivities = require('@orbit-love/activities')
 
 class OrbitYouTube {
     constructor(orbitWorkspaceId, orbitApiKey, ytApiKey, ytChannelId) {
         this.credentials = this.setCredentials(orbitWorkspaceId, orbitApiKey, ytApiKey, ytChannelId)
-        this.youtube = new YouTube(this.credentials.ytApiKey, undefined, {
-            cache: false
-        })
+        this.youtube = new YouTube(this.credentials.ytApiKey, undefined, { cache: false })
+        this.orbit = new OrbitActivities(this.credentials.orbitWorkspaceId, this.credentials.orbitApiKey, `community-js-youtube-orbit/${pkg.version}`)
     }
 
     setCredentials(orbitWorkspaceId, orbitApiKey, ytApiKey) {
@@ -50,8 +48,17 @@ class OrbitYouTube {
     addActivities(activities) {
         return new Promise(async (resolve, reject) => {
             try {
-                const data = await orbit.addActivities(activities, { credentials: this.credentials, BASE_URL })
-                resolve(data)
+                let stats = { added: 0, duplicates: 0, errors: [] }
+                for(let activity of activities) {
+                    await this.orbit.createActivity(activity)
+                        .then(() => { stats.added++ })
+                        .catch(err => {
+                            console.log('e', err)
+                            if(err.errors.key) stats.duplicates++
+                            else { errors.push(err) }
+                        })
+                }
+                resolve(stats)
             } catch(error) {
                 reject(error)
             }

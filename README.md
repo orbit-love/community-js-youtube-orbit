@@ -60,8 +60,8 @@ const orbitYouTube = new OrbitYouTube()
 // Allows you to go back a number of hours and only get comments in that timeframe
 const videos = await orbitYouTube.getComments({ channelId: YOUTUBE_CHANNEL_ID, hours: 24 })
 const comments = await orbitYouTube.prepareComments(videos)
-const response = await orbitYouTube.addActivities(comments)
-console.log(response) // "Added n activities to the workspace-id Orbit workspace"
+const summary = await orbitYouTube.addActivities(comments)
+console.log(summary)
 ```
 
 The standard initialization of the library requires the following signature:
