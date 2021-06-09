@@ -53,7 +53,6 @@ class OrbitYouTube {
                     await this.orbit.createActivity(activity)
                         .then(() => { stats.added++ })
                         .catch(err => {
-                            console.log('e', err)
                             if(err.errors.key) stats.duplicates++
                             else { errors.push(err) }
                         })
