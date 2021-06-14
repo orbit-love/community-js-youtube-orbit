@@ -19,7 +19,10 @@ const getCommentsFromVideos = (youtube, videos) => {
             let c = []
             for(let video of videos) {
                 const comments = await youtube.getVideoComments(video, 0).catch(error => {
-                    if(error != 'commentThreads not found') throw new Error(error)
+                    const e = String(error)
+                    const commentThreadsNotFound = e.includes('commentThreads not found')
+                    const disabledComments = e.includes('disabled comments')
+                    if(!commentThreadsNotFound && !disabledComments) throw new Error(error)
                 })
                 if(comments) {
                     const commentsWithTitle = comments.map(comment => {
