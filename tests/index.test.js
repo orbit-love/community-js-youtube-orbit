@@ -1,148 +1,86 @@
-/**
- * @jest-environment node
- */
+const axios = require('axios')
+const OrbitYouTube = require('../src/index')
+const qs = require('querystring')
+jest.mock('axios')
 
-const OrbitYouTube = require('../src/index.js')
-const YOUTUBE_COMMENTS = require('./YOUTUBE_COMMENTS.json')
+describe('OrbitYouTube constructor', () => {
+  it('given all credentials, does not throw', () => {
+    const sut = new OrbitYouTube('1', '2', '3', '4')
+    expect(sut).not.toBeNull()
+  })
 
-beforeAll(() => {
-    jest.spyOn(OrbitYouTube.prototype, 'getComments').mockImplementation(options => {
-        if (!options) throw new Error('You must provide an options object')
-        if (!options.channelId) throw new Error('You must provide channelId')
-        if (!options.hours) throw new Error('You must provide hours')
-        return Promise.resolve(YOUTUBE_COMMENTS)
-    })
+  it('given missing values, throws', () => {
+    delete process.env.ORBIT_WORKSPACE_ID
+    delete process.env.ORBIT_API_KEY
+    delete process.env.YOUTUBE_API_KEY
+    delete process.env.YOUTUBE_CHANNEL_ID
+
+    expect(() => {
+      new OrbitYouTube(null, null, null, null)
+    }).toThrow()
+  })
+
+  it('given missing youtube credentials, throws', () => {
+    delete process.env.YOUTUBE_API_KEY
+    delete process.env.YOUTUBE_CHANNEL_ID
+
+    expect(() => {
+      new OrbitYouTube('1', '2', null, '4')
+    }).toThrow(/YOUTUBE_API_KEY/)
+    expect(() => {
+      new OrbitYouTube('1', '2', '3', null)
+    }).toThrow(/YOUTUBE_CHANNEL_ID/)
+  })
+
+  it('reads from env vars when values not directly provided', () => {
+    process.env.ORBIT_WORKSPACE_ID = '1'
+    process.env.ORBIT_API_KEY = '2'
+    process.env.YOUTUBE_API_KEY = '3'
+    process.env.YOUTUBE_CHANNEL_ID = '4'
+
+    const sut = new OrbitYouTube(null, null, null, null)
+
+    expect(sut.credentials.orbitWorkspaceId).toBe('1')
+    expect(sut.credentials.ytChannelId).toBe('4')
+  })
+
+  it('sets @orbit-love/activities creds correctly', () => {
+    const sut = new OrbitYouTube('1', '2', '3', '4')
+    expect(sut.orbit.credentials.orbitWorkspaceId).toBe('1')
+    expect(sut.orbit.credentials.orbitApiKey).toBe('2')
+  })
 })
 
-describe('client', () => {
-    it('initializes with arguments passed in directly', () => {
-        envVars(false)
-        const orbitYouTube = new OrbitYouTube('val1', 'val2', 'val3')
-        expect(orbitYouTube.credentials.orbitWorkspaceId).toBe('val1')
-        expect(orbitYouTube.credentials.orbitApiKey).toBe('val2')
-        expect(orbitYouTube.credentials.ytApiKey).toBe('val3')
-    })
+describe('OrbitYouTube api', () => {
+  let sut
+  beforeEach(() => {
+    sut = new OrbitYouTube('1', '2', '3', '4')
+  })
 
-    it('initializes with credentials from environment variables', () => {
-        envVars(true)
-        new OrbitYouTube()
-    })
+  it('if path is missing, throws', async () => {
+    await expect(sut.api()).rejects.toThrow(/path/)
+  })
 
-    it('throws with incomplete set of credentials', () => {
-        expect(() => {
-            envVars(false);
-            process.env.ORBIT_WORKSPACE_ID = "val1";
-            new OrbitYouTube();
-        }).toThrow()
-        expect(() => {
-            envVars(false);
-            process.env.ORBIT_API_KEY = "val2";
-            new OrbitYouTube();
-        }).toThrow()
-        expect(() => {
-            envVars(false);
-            process.env.YOUTUBE_API_KEY = "val3";
-            new OrbitYouTube();
-        }).toThrow()
-        expect(() => {
-            envVars(false)
-            process.env.ORBIT_WORKSPACE_ID = "val1"
-            process.env.ORBIT_API_KEY = "val2"
-            new OrbitYouTube()
-        }).toThrow()
-        expect(() => {
-            envVars(false)
-            process.env.ORBIT_API_KEY = "val2"
-            process.env.YOUTUBE_API_KEY = "val3"
-            new OrbitYouTube()
-        }).toThrow()
-        expect(() => {
-            envVars(false)
-            process.env.ORBIT_WORKSPACE_ID = "val2"
-            process.env.YOUTUBE_API_KEY = "val3"
-            new OrbitYouTube()
-        }).toThrow()
+  it('encodes api key in url correctly', async () => {
+    axios.get.mockResolvedValueOnce({ data: {} })
 
-        expect(() => {
-            envVars(false);
-            new orbitYouTube('val1', 'val2')
-        }).toThrow()
-        expect(() => {
-            envVars(false);
-            new orbitYouTube('val1')
-        }).toThrow()
-    })
+    await sut.api('/path')
+    const url = axios.get.mock.calls[0][0]
+    const search = url.split('?')[1]
+    const params = qs.decode(search)
+
+    expect(params.key).toBe('3')
+  })
+
+  it('given a query, encodes url correctly', async () => {
+    axios.get.mockResolvedValueOnce({ data: {} })
+
+    await sut.api('/path', { key1: 'val1', key2: 'val2' })
+    const url = axios.get.mock.calls[0][0]
+    const search = url.split('?')[1]
+    const params = qs.decode(search)
+
+    expect(params.key1).toBe('val1')
+    expect(params.key2).toBe('val2')
+  })
 })
-
- describe('get comments', () => {
-     it('returns array', async () => {
-         envVars(true)
-         const orbitYouTube = new OrbitYouTube()
-         const questions = await orbitYouTube.getComments({ channelId: 'channel', hours: 24 })
-         expect(Array.isArray(questions)).toBe(true)
-    })
-
-    it('requires an object', async () => {
-        try {
-            const orbitYouTube = new OrbitYouTube()
-            await orbitYouTube.getComments()
-            fail()
-        } catch(error) {
-            expect(String(error).includes('object')).toBeTruthy()
-        }
-    })
-
-    it('requires a channel', async () => {
-        try {
-            const orbitYouTube = new OrbitYouTube()
-            await orbitYouTube.getComments({ hours: 12 })
-            fail()
-        } catch(error) {
-            expect(String(error).includes('channel')).toBeTruthy()
-        }
-    })
-
-    it('requires hours', async () => {
-        try {
-            const orbitYouTube = new OrbitYouTube()
-            await orbitYouTube.getComments({ channelId: 'val' })
-            fail()
-        } catch(error) {
-            expect(String(error).includes('hours')).toBeTruthy()
-        }
-    })
- })
-
- describe('prepare comments', () => {
-     it('returns array of same size as the input', async () => {
-         envVars(true)
-         const orbitYouTube = new OrbitYouTube()
-         const comments = await orbitYouTube.getComments({ channelId: 'val', hours: 1 })
-         const prepared = await orbitYouTube.prepareComments(comments)
-         expect(comments.length).toEqual(prepared.length)
-     })
-     it('structure is correct', async () => {
-         envVars(true)
-         const orbitYouTube = new OrbitYouTube()
-         const comments = await orbitYouTube.getComments({ channelId: 'val', hours: 1 })
-         const prepared = await orbitYouTube.prepareComments(comments)
-         const p = prepared[0]
-         expect(p.activity).toBeTruthy()
-         expect(p.activity.activity_type).toBe('youtube:comment')
-         expect(p.activity.title).toBeTruthy()
-         expect(p.activity.member).toBeTruthy()
-         expect(p.identity.source_host).toBe('youtube.com')
-     })
- })
-
-function envVars(toHaveVars) {
-    if (toHaveVars) {
-        process.env.ORBIT_WORKSPACE_ID = 'var1'
-        process.env.ORBIT_API_KEY = 'var2'
-        process.env.YOUTUBE_API_KEY = 'var3'
-    } else {
-        delete process.env.ORBIT_WORKSPACE_ID
-        delete process.env.ORBIT_API_KEY
-        delete process.env.YOUTUBE_API_KEY
-    }
-}
