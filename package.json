@@ -33,7 +33,6 @@
     "dotenv": "^9.0.2",
     "moment": "^2.29.1",
     "popyt": "^5.0.0",
-    "query-string": "^7.0.1",
     "querystring": "^0.2.1",
     "yargs": "^17.0.1"
   },

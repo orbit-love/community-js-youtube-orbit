@@ -1,7 +1,7 @@
 const pkg = require('../package.json')
 const OrbitActivities = require('@orbit-love/activities')
 const axios = require('axios')
-const qs = require('query-string')
+const qs = require('querystring')
 
 class OrbitYouTube {
   constructor(orbitWorkspaceId, orbitApiKey, ytApiKey, ytChannelId) {
@@ -15,26 +15,26 @@ class OrbitYouTube {
 
   setCredentials(orbitWorkspaceId, orbitApiKey, ytApiKey) {
     if (!(orbitWorkspaceId || process.env.ORBIT_WORKSPACE_ID))
-      throw new Error('You must provide an Orbit Workspace ID or set an ORBIT_WORKSPACE_ID environment variable')
+      throw 'You must provide an Orbit Workspace ID or set an ORBIT_WORKSPACE_ID environment variable'
     if (!(orbitApiKey || process.env.ORBIT_API_KEY))
-      throw new Error('You must provide an Orbit API Key or set an ORBIT_API_KEY environment variable')
+      throw 'You must provide an Orbit API Key or set an ORBIT_API_KEY environment variable'
     if (!(ytApiKey || process.env.YOUTUBE_API_KEY))
-      throw new Error('You must provide a YouTube API Key or set a YOUTUBE_API_KEY environment variable')
+      throw 'You must provide a YouTube API Key or set a YOUTUBE_API_KEY environment variable'
     return {
       orbitWorkspaceId: orbitWorkspaceId || process.env.ORBIT_WORKSPACE_ID,
       orbitApiKey: orbitApiKey || process.env.ORBIT_API_KEY,
-      ytApiKey: ytApiKey || process.env.YOUTUBE_API_KEY,
+      ytApiKey: ytApiKey || process.env.YOUTUBE_API_KEY
     }
   }
 
   async api(path, query = {}) {
     try {
-      if (!path) throw new Error('You must provide a path')
+      if (!path) throw 'You must provide a path'
       const BASE_URL = 'https://www.googleapis.com/youtube/v3'
-      const options = { key: this.credentials.ytApiKey, ...query } 
-      const url = BASE_URL + path + '?' + qs.stringify(options) 
-      const { data } = await axios.get(url) 
-      return data 
+      const options = { key: this.credentials.ytApiKey, ...query }
+      const url = BASE_URL + path + '?' + qs.encode(options)
+      const { data } = await axios.get(url)
+      return data
     } catch (error) {
       throw new Error(error)
     }
@@ -42,25 +42,39 @@ class OrbitYouTube {
 
   async getChannelUploadPlaylistId(channelId) {
     try {
-      if(!channelId) throw new Error('You must provide a channelId')
+      if (!channelId) throw 'You must provide a channelId'
       const channelsList = await this.api('/channels', { part: 'contentDetails', id: channelId })
-      if(!channelsList.items) throw new Error('404: no channel with that id')
+      if (!channelsList.items) throw new Error('404: no channel with that id')
       const uploadsPlaylist = channelsList.items[0].contentDetails.relatedPlaylists.uploads
       return uploadsPlaylist
-    } catch(error) {
+    } catch (error) {
       throw new Error(error)
     }
   }
 
+  async getVideoPage(playlistId, pageToken) {
+    try {
+      if (!playlistId) throw 'You must provide a playlistId'
+      const query = { part: 'snippet,contentDetails', maxResults: 50, playlistId }
+      if (pageToken) query.pageToken = pageToken
+      const videos = await this.api('/playlistItems', query)
+      return videos
+    } catch (error) {
+      throw new Error(error)
+    }
+  }
+
+  //*****//
+
   async getComments(options) {
     return new Promise(async (resolve, reject) => {
-        try {
-            const { channelId, hours } = options
-            const newComments = await comments.get(this.youtube, { channelId, hours })
-            resolve(newComments)
-        } catch(error) {
-            reject(error)
-        }
+      try {
+        const { channelId, hours } = options
+        const newComments = await comments.get(this.youtube, { channelId, hours })
+        resolve(newComments)
+      } catch (error) {
+        reject(error)
+      }
     })
   }
 

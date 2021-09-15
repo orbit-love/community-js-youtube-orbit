@@ -1,4 +1,5 @@
 const axios = require('axios')
+const qs = require('querystring')
 const OrbitYouTube = require('../src/index')
 jest.mock('axios')
 
@@ -69,7 +70,7 @@ describe('OrbitYouTube api', () => {
   })
 
   it('given a query, encodes url correctly', async () => {
-    axios.get.mockResolvedValueOnce({ data: {} }) 
+    axios.get.mockResolvedValueOnce({ data: {} })
     await sut.api('/path', { key1: 'val1' })
     expect(axios.get).toHaveBeenCalledWith('https://www.googleapis.com/youtube/v3/path?key=3&key1=val1')
   })
@@ -97,9 +98,59 @@ describe('OrbitYouTube getChannel', () => {
   })
 
   it('returns correct value', async () => {
-    const toReturn = { data: { items: [ { contentDetails: { relatedPlaylists: { uploads: 'value' }}}]}}
+    const toReturn = { data: { items: [{ contentDetails: { relatedPlaylists: { uploads: 'value' } } }] } }
     axios.get.mockResolvedValueOnce(toReturn)
     const playlistId = await sut.getChannelUploadPlaylistId('123')
     expect(playlistId).toBe('value')
+  })
+})
+
+describe('OrbitYouTube getVideoPage', () => {
+  let sut
+  beforeEach(() => {
+    sut = new OrbitYouTube('1', '2', '3', '4')
+  })
+
+  it('given no playlistId, throws', async () => {
+    await expect(sut.getVideoPage()).rejects.toThrow(/playlistId/)
+  })
+
+  it('given no page token, omit from query', async () => {
+    axios.get.mockResolvedValueOnce({ data: {} })
+    const expectedParams = qs.encode({ key: 3, part: 'snippet,contentDetails', maxResults: 50, playlistId: 'id' })
+    const expectedUrl = `https://www.googleapis.com/youtube/v3/playlistItems?${expectedParams}`
+
+    await sut.getVideoPage('id')
+
+    expect(axios.get).toHaveBeenCalledWith(expectedUrl)
+  })
+
+  it('given page token, include in query', async () => {
+    axios.get.mockResolvedValueOnce({ data: {} })
+    const expectedParams = qs.encode({
+      key: 3,
+      part: 'snippet,contentDetails',
+      maxResults: 50,
+      playlistId: 'id',
+      pageToken: 'token'
+    })
+    const expectedUrl = `https://www.googleapis.com/youtube/v3/playlistItems?${expectedParams}`
+
+    await sut.getVideoPage('id', 'token')
+
+    expect(axios.get).toHaveBeenCalledWith(expectedUrl)
+  })
+
+  it('returns correct value', async () => {
+    const toReturn = { data: { value: '1' } }
+    axios.get.mockResolvedValueOnce(toReturn)
+    const page = await sut.getVideoPage('id')
+    expect(page.value).toBe('1')
+  })
+
+  it('given an error, throws', async () => {
+    const error = 'Network error'
+    axios.get.mockImplementationOnce(() => Promise.reject(new Error(error)))
+    await expect(sut.getVideoPage('id')).rejects.toThrow(error)
   })
 })
