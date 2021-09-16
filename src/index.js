@@ -36,7 +36,11 @@ class OrbitYouTube {
       const { data } = await axios.get(url)
       return data
     } catch (error) {
-      throw new Error(error)
+      if (error.response) {
+        throw new Error(`${error.response.status}: ${JSON.stringify(error.response.data)}`)
+      } else {
+        throw new Error(error)
+      }
     }
   }
 
@@ -85,19 +89,61 @@ class OrbitYouTube {
     }
   }
 
-  //*****//
+  async getCommentPage(videoId, pageToken) {
+    try {
+      if (!videoId) throw 'You must provide a videoId'
+      const query = { part: 'snippet,replies', maxResults: 50, videoId }
+      if (pageToken) query.pageToken = pageToken
 
-  async getComments(options) {
-    return new Promise(async (resolve, reject) => {
-      try {
-        const { channelId, hours } = options
-        const newComments = await comments.get(this.youtube, { channelId, hours })
-        resolve(newComments)
-      } catch (error) {
-        reject(error)
+      const comments = await this.api('/commentThreads', query).catch(error => {
+        const e = String(error)
+        const commentThreadsNotFound = e.includes('not found')
+        const disabledComments = e.includes('disabled')
+        if (commentThreadsNotFound || disabledComments) {
+          return { items: [], nextPageToken: false }
+        } else {
+          throw e
+        }
+      })
+
+      let replies = []
+      for (let item of comments.items) {
+        if (item.snippet.totalReplyCount) {
+          replies = item.replies.comments
+        }
       }
-    })
+
+      return {
+        items: [...comments.items, ...replies],
+        nextPageToken: comments.nextPageToken
+      }
+    } catch (error) {
+      throw new Error(error)
+    }
   }
+
+  async getComments(videoId) {
+    try {
+      let comments = []
+      let nextPageToken
+
+      const initialPage = await this.getCommentPage(videoId)
+      comments = initialPage.items
+      nextPageToken = initialPage.nextPageToken
+
+      while (nextPageToken) {
+        const page = await this.getCommentPage(videoId, nextPageToken)
+        comments = [...comments, ...page.items]
+        nextPageToken = page.nextPageToken
+      }
+
+      return comments
+    } catch (error) {
+      throw new Error(error)
+    }
+  }
+
+  ///
 
   prepareComments(list) {
     return new Promise(async (resolve, reject) => {

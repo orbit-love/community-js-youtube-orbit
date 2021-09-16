@@ -75,10 +75,16 @@ describe('OrbitYouTube api', () => {
     expect(axios.get).toHaveBeenCalledWith('https://www.googleapis.com/youtube/v3/path?key=3&key1=val1')
   })
 
-  it('given an error, throws', async () => {
+  it('given a generic error, throws', async () => {
     const error = 'Network error'
-    axios.get.mockImplementationOnce(() => Promise.reject(new Error(error)))
+    axios.get.mockImplementationOnce(() => Promise.reject(error))
     await expect(sut.api('/')).rejects.toThrow(error)
+  })
+
+  it('given a specific axios error, throws', async () => {
+    const error = { response: { data: { error: 'test' }, status: 403 } }
+    axios.get.mockImplementationOnce(() => Promise.reject(error))
+    await expect(sut.api('/')).rejects.toThrow(/test/)
   })
 })
 
@@ -150,7 +156,7 @@ describe('OrbitYouTube getVideoPage', () => {
 
   it('given an error, throws', async () => {
     const error = 'Network error'
-    axios.get.mockImplementationOnce(() => Promise.reject(new Error(error)))
+    axios.get.mockImplementationOnce(() => Promise.reject(error))
     await expect(sut.getVideoPage('id')).rejects.toThrow(error)
   })
 })
@@ -175,9 +181,124 @@ describe('OrbitYouTube getVideos', () => {
     expect(videos.length).toBe(70)
   })
 
-  // it('given an error, throws', async () => {
-  //   const error = 'Network error'
-  //   axios.get.mockImplementationOnce(() => Promise.reject(new Error(error)))
-  //   await expect(sut.getVideoPage('id')).rejects.toThrow(error)
-  // })
+  it('given an error, throws', async () => {
+    const error = 'Network error'
+    axios.get.mockImplementationOnce(() => Promise.reject(error))
+    await expect(sut.getVideos('id')).rejects.toThrow(error)
+  })
+})
+
+describe('OrbitYouTube getCommentPage', () => {
+  let sut
+  beforeEach(() => {
+    sut = new OrbitYouTube('1', '2', '3', '4')
+  })
+
+  it('given no videoId, throws', async () => {
+    await expect(sut.getCommentPage()).rejects.toThrow(/videoId/)
+  })
+
+  it('given no page token, omit from query', async () => {
+    axios.get.mockResolvedValueOnce({ data: { items: [] } })
+    const expectedParams = qs.encode({ key: 3, part: 'snippet,replies', maxResults: 50, videoId: 'id' })
+    const expectedUrl = `https://www.googleapis.com/youtube/v3/commentThreads?${expectedParams}`
+
+    await sut.getCommentPage('id')
+
+    expect(axios.get).toHaveBeenCalledWith(expectedUrl)
+  })
+
+  it('given page token, include in query', async () => {
+    axios.get.mockResolvedValueOnce({ data: { items: [] } })
+    const expectedParams = qs.encode({
+      key: 3,
+      part: 'snippet,replies',
+      maxResults: 50,
+      videoId: 'id',
+      pageToken: 'token'
+    })
+    const expectedUrl = `https://www.googleapis.com/youtube/v3/commentThreads?${expectedParams}`
+
+    await sut.getCommentPage('id', 'token')
+
+    expect(axios.get).toHaveBeenCalledWith(expectedUrl)
+  })
+
+  it('given no comments, returns empty array', async () => {
+    axios.get.mockResolvedValueOnce({ data: { items: [] } })
+    const comments = await sut.getCommentPage('id')
+    expect(Array.isArray(comments.items)).toBe(true)
+    expect(comments.items.length).toBe(0)
+  })
+
+  it('given comments with no replies, returns comments', async () => {
+    const items = [...Array(20).keys()].fill({ snippet: { totalReplyCount: 0 } })
+    axios.get.mockResolvedValueOnce({ data: { items } })
+    const comments = await sut.getCommentPage('id')
+    expect(comments.items.length).toBe(20)
+  })
+
+  it('given comment replies, returns single array', async () => {
+    let items = [
+      { snippet: { totalReplyCount: 0 } },
+      { snippet: { totalReplyCount: 0 } },
+      { snippet: { totalReplyCount: 0 } },
+      { snippet: { totalReplyCount: 2 }, replies: { comments: [{}, {}] } },
+      { snippet: { totalReplyCount: 2 }, replies: { comments: [{}, {}] } }
+    ]
+    axios.get.mockResolvedValueOnce({ data: { items } })
+    const comments = await sut.getCommentPage('id')
+    expect(comments.items.length).toBe(7)
+  })
+
+  it('given nextPageToken, returns value', async () => {
+    axios.get.mockResolvedValueOnce({ data: { items: [], nextPageToken: '123' } })
+    const comments = await sut.getCommentPage('id')
+    expect(comments.nextPageToken).toBe('123')
+  })
+
+  it('given comments turned off, returns empty array', async () => {
+    const error = { response: { data: { error: 'disabled' } } }
+    axios.get.mockImplementationOnce(() => Promise.reject(error))
+    const response = await sut.getCommentPage('id')
+    await expect(response.items).not.toBeNull()
+  })
+
+  it('given an error, throws', async () => {
+    const error = 'Network error'
+    axios.get.mockImplementationOnce(() => Promise.reject(error))
+    await expect(sut.getCommentPage('id')).rejects.toThrow(error)
+  })
+})
+
+describe('OrbitYouTube getComments', () => {
+  let sut
+  beforeEach(() => {
+    sut = new OrbitYouTube('1', '2', '3', '4')
+  })
+
+  it('given fewer than 50 items, returns array of items', async () => {
+    axios.get.mockResolvedValueOnce({ data: { items: [...Array(5).keys()].fill({ snippet: { totalReplyCount: 0 } }) } })
+    const comments = await sut.getComments('id')
+    expect(comments.length).toBe(5)
+  })
+
+  it('given greater than 50 items, returns array of items', async () => {
+    axios.get
+      .mockResolvedValueOnce({
+        data: {
+          items: [...Array(50).keys()].fill({ snippet: { totalReplyCount: 0 } }),
+          nextPageToken: '123'
+        }
+      })
+      .mockResolvedValueOnce({ data: { items: [...Array(20).keys()].fill({ snippet: { totalReplyCount: 0 } }) } })
+    const comments = await sut.getComments('id')
+    expect(comments.length).toBe(70)
+  })
+
+  it('given an error, throws', async () => {
+    const error = 'Network error'
+    axios.get.mockImplementationOnce(() => Promise.reject(error))
+    await expect(sut.getComments('id')).rejects.toThrow(error)
+  })
 })
