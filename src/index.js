@@ -64,6 +64,27 @@ class OrbitYouTube {
     }
   }
 
+  async getVideos(playlistId) {
+    try {
+      let videos = []
+      let nextPageToken
+
+      const initialPage = await this.getVideoPage(playlistId)
+      videos = initialPage.items
+      nextPageToken = initialPage.nextPageToken
+
+      while (nextPageToken) {
+        const page = await this.getVideoPage(playlistId, nextPageToken)
+        videos = [...videos, ...page.items]
+        nextPageToken = page.nextPageToken
+      }
+
+      return videos
+    } catch (error) {
+      throw new Error(error)
+    }
+  }
+
   //*****//
 
   async getComments(options) {

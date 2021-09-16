@@ -154,3 +154,30 @@ describe('OrbitYouTube getVideoPage', () => {
     await expect(sut.getVideoPage('id')).rejects.toThrow(error)
   })
 })
+
+describe('OrbitYouTube getVideos', () => {
+  let sut
+  beforeEach(() => {
+    sut = new OrbitYouTube('1', '2', '3', '4')
+  })
+
+  it('given fewer than 50 items, returns array of items', async () => {
+    axios.get.mockResolvedValueOnce({ data: { items: [...Array(5).keys()] } })
+    const videos = await sut.getVideos('id')
+    expect(videos.length).toBe(5)
+  })
+
+  it('given greater than 50 items, returns array of items', async () => {
+    axios.get
+      .mockResolvedValueOnce({ data: { items: [...Array(50).keys()], nextPageToken: '123' } })
+      .mockResolvedValueOnce({ data: { items: [...Array(20).keys()] } })
+    const videos = await sut.getVideos('id')
+    expect(videos.length).toBe(70)
+  })
+
+  // it('given an error, throws', async () => {
+  //   const error = 'Network error'
+  //   axios.get.mockImplementationOnce(() => Promise.reject(new Error(error)))
+  //   await expect(sut.getVideoPage('id')).rejects.toThrow(error)
+  // })
+})
