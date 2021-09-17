@@ -419,6 +419,64 @@ describe('OrbitYouTube filterComments', () => {
   })
 })
 
+describe('OrbitYouTube prepareComments', () => {
+  let sut
+  beforeEach(() => {
+    sut = new OrbitYouTube('1', '2', '3')
+  })
+
+  it('if no list is provided or is empty, returns empty array', async () => {
+    const noParameter = sut.prepareComments()
+    const emptyArray = sut.prepareComments([])
+
+    expect(Array.isArray(noParameter)).toBe(true)
+    expect(Array.isArray(emptyArray)).toBe(true)
+    expect(noParameter.length).toBe(0)
+    expect(emptyArray.length).toBe(0)
+  })
+
+  it('given array, returns same size array', async () => {
+    axios.get.mockResolvedValueOnce(returnValueGenerator({ type: 'comments', items: 3 }))
+    const comments = await sut.getComments('1')
+    const prepared = await sut.prepareComments(comments)
+    expect(prepared.length).toBe(3)
+  })
+
+  it('object is correctly formed', async () => {
+    axios.get.mockResolvedValueOnce(returnValueGenerator({ type: 'comments', items: 3 }))
+    const comments = await sut.getComments('1')
+    const [prepared] = await sut.prepareComments(comments)
+
+    expect(prepared.activity.title).toBe('Commented on YouTube Video')
+    expect(prepared.activity.description).toBe('text display')
+    expect(prepared.activity.link).toBe('https://youtu.be/video-id')
+    expect(prepared.activity.key).toBe(`youtube-comment-${comments[0].snippet.publishedAt}`)
+    expect(prepared.activity.occurred_at).toBe(comments[0].snippet.publishedAt)
+    expect(prepared.activity.member.name).toBe('joe bloggs')
+    expect(prepared.identity.source_host).toBe('youtube.com')
+    expect(prepared.identity.url).toBe('https://youtube.com/channel/joebloggs')
+    expect(prepared.identity.uid).toBe('joebloggs')
+  })
+
+  it('activity title returns both with and without video title passed', async () => {
+    const comment = {
+      id: '123',
+      snippet: {
+        videoId: 'video-id',
+        textDisplay: 'text display',
+        authorDisplayName: 'joe bloggs',
+        authorChannelId: { value: 'joebloggs' },
+        authorChannelUrl: 'https://youtube.com/channel/joebloggs'
+      }
+    }
+    const commentWithTitle = { ...comment, snippet: { ...comment.snippet, videoTitle: 'Video Title' } }
+    const prepared = sut.prepareComments([comment, commentWithTitle])
+
+    expect(prepared[0].activity.title).toBe('Commented on YouTube Video')
+    expect(prepared[1].activity.title).toBe('Commented on Video Title')
+  })
+})
+
 function returnValueGenerator(options) {
   const { type, items, nextPage, itemsWithChildren, childComments, commentAge } = options
   let r = { data: { items: [] } }
@@ -433,14 +491,24 @@ function returnValueGenerator(options) {
     if (nextPage) r.data.nextPageToken = 'next-page-token'
   }
   if (type == 'comments') {
+    const comment = {
+      id: '123',
+      snippet: {
+        videoId: 'video-id',
+        textDisplay: 'text display',
+        authorDisplayName: 'joe bloggs',
+        authorChannelId: { value: 'joebloggs' },
+        authorChannelUrl: 'https://youtube.com/channel/joebloggs'
+      }
+    }
     for (let i = 0; i < items; i++) {
-      r.data.items.push({ snippet: { totalReplyCount: 0, topLevelComment: { snippet: {} } } })
+      r.data.items.push({ snippet: { totalReplyCount: 0, topLevelComment: comment } })
     }
     for (let i = 0; i < itemsWithChildren; i++) {
       r.data.items[i].snippet.totalReplyCount = childComments
       r.data.items[i].replies = { comments: [] }
       for (let j = 0; j < childComments; j++) {
-        r.data.items[i].replies.comments.push({})
+        r.data.items[i].replies.comments.push(comment)
       }
     }
     if (commentAge) {

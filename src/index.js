@@ -181,44 +181,32 @@ class OrbitYouTube {
     }
   }
 
-  prepareComments(list) {
+  prepareComments(list = []) {
     return list.map(item => {
       const { snippet } = item
       return {
         activity: {
-          description: snippet.textOriginal,
-          link: snippet.url,
+          description: snippet.textDisplay,
+          link: `https://youtu.be/${snippet.videoId}`,
           link_text: 'See comment on YouTube',
-          title: `Commented on ${snippet.videoTitle}`,
+          title: snippet.videoTitle ? `Commented on ${snippet.videoTitle}` : 'Commented on YouTube Video',
           tags: ['channel:youtube'],
           activity_type: 'youtube:comment',
-          key: `youtube-comment-${snippet.id}`,
-          occurred_at: new Date(snippet.datePublished),
+          key: `youtube-comment-${snippet.publishedAt}`,
+          occurred_at: snippet.publishedAt,
           member: {
-            name: snippet.author.username
+            name: snippet.authorDisplayName
           }
         },
         identity: {
           source: 'YouTube',
           source_host: 'youtube.com',
-          username: snippet.author.username,
-          url: snippet.author.channelUrl,
-          uid: snippet.author.channelId
+          url: snippet.authorChannelUrl,
+          uid: snippet.authorChannelId.value
         }
       }
     })
   }
-
-  // prepareComments(list) {
-  //   return new Promise(async (resolve, reject) => {
-  //     try {
-  //       const prepared = comments.prepare(list)
-  //       resolve(prepared)
-  //     } catch (error) {
-  //       reject(error)
-  //     }
-  //   })
-  // }
 
   addActivities(activities) {
     return new Promise(async (resolve, reject) => {
