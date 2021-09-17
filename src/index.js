@@ -2,6 +2,7 @@ const pkg = require('../package.json')
 const OrbitActivities = require('@orbit-love/activities')
 const axios = require('axios')
 const qs = require('querystring')
+const moment = require('moment')
 
 class OrbitYouTube {
   constructor(orbitWorkspaceId, orbitApiKey, ytApiKey, ytChannelId) {
@@ -105,6 +106,10 @@ class OrbitYouTube {
           throw e
         }
       })
+      const flattenedComments = comments.items.map(c => ({
+        ...c,
+        snippet: { ...c.snippet, ...c.snippet.topLevelComment.snippet }
+      }))
 
       let replies = []
       for (let item of comments.items) {
@@ -114,7 +119,7 @@ class OrbitYouTube {
       }
 
       return {
-        items: [...comments.items, ...replies],
+        items: [...flattenedComments, ...replies],
         nextPageToken: comments.nextPageToken
       }
     } catch (error) {
@@ -161,7 +166,15 @@ class OrbitYouTube {
     }
   }
 
-  ///
+  async filterComments(list, hours) {
+    try {
+      if (!list) throw 'You must provide a list of comments'
+      if (!hours) throw 'You must provide a number of hours to include comments from'
+      return comments.filter(comment => moment().diff(moment(comment.publishedAt), 'hours') <= hours)
+    } catch (error) {
+      throw new Error('filterComments error: ' + error)
+    }
+  }
 
   prepareComments(list) {
     return new Promise(async (resolve, reject) => {

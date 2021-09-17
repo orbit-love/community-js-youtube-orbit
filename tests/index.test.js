@@ -104,8 +104,7 @@ describe('OrbitYouTube getChannelUploadPlaylistId', () => {
   })
 
   it('returns correct value', async () => {
-    const toReturn = { data: { items: [{ contentDetails: { relatedPlaylists: { uploads: 'value' } } }] } }
-    axios.get.mockResolvedValueOnce(toReturn)
+    axios.get.mockResolvedValueOnce(returnValueGenerator({ type: 'channels' }))
     const playlistId = await sut.getChannelUploadPlaylistId('123')
     expect(playlistId).toBe('value')
   })
@@ -168,15 +167,15 @@ describe('OrbitYouTube getVideos', () => {
   })
 
   it('given fewer than 50 items, returns array of items', async () => {
-    axios.get.mockResolvedValueOnce({ data: { items: [...Array(5).keys()] } })
+    axios.get.mockResolvedValueOnce(returnValueGenerator({ type: 'videos', items: 2 }))
     const videos = await sut.getVideos('id')
-    expect(videos.length).toBe(5)
+    expect(videos.length).toBe(2)
   })
 
   it('given greater than 50 items, returns array of items', async () => {
     axios.get
-      .mockResolvedValueOnce({ data: { items: [...Array(50).keys()], nextPageToken: '123' } })
-      .mockResolvedValueOnce({ data: { items: [...Array(20).keys()] } })
+      .mockResolvedValueOnce(returnValueGenerator({ type: 'videos', items: 50, nextPage: true }))
+      .mockResolvedValueOnce(returnValueGenerator({ type: 'videos', items: 20 }))
     const videos = await sut.getVideos('id')
     expect(videos.length).toBe(70)
   })
@@ -232,29 +231,23 @@ describe('OrbitYouTube getCommentPage', () => {
   })
 
   it('given comments with no replies, returns comments', async () => {
-    const items = [...Array(20).keys()].fill({ snippet: { totalReplyCount: 0 } })
-    axios.get.mockResolvedValueOnce({ data: { items } })
+    axios.get.mockResolvedValueOnce(returnValueGenerator({ type: 'comments', items: 3 }))
     const comments = await sut.getCommentPage('id')
-    expect(comments.items.length).toBe(20)
+    expect(comments.items.length).toBe(3)
   })
 
   it('given comment replies, returns single array', async () => {
-    let items = [
-      { snippet: { totalReplyCount: 0 } },
-      { snippet: { totalReplyCount: 0 } },
-      { snippet: { totalReplyCount: 0 } },
-      { snippet: { totalReplyCount: 2 }, replies: { comments: [{}, {}] } },
-      { snippet: { totalReplyCount: 2 }, replies: { comments: [{}, {}] } }
-    ]
-    axios.get.mockResolvedValueOnce({ data: { items } })
+    axios.get.mockResolvedValueOnce(
+      returnValueGenerator({ type: 'comments', items: 5, itemsWithChildren: 2, childComments: 2 })
+    )
     const comments = await sut.getCommentPage('id')
     expect(comments.items.length).toBe(7)
   })
 
   it('given nextPageToken, returns value', async () => {
-    axios.get.mockResolvedValueOnce({ data: { items: [], nextPageToken: '123' } })
+    axios.get.mockResolvedValueOnce(returnValueGenerator({ type: 'comments', nextPage: true }))
     const comments = await sut.getCommentPage('id')
-    expect(comments.nextPageToken).toBe('123')
+    expect(comments.nextPageToken).toBe('next-page-token')
   })
 
   it('given comments turned off, returns empty array', async () => {
@@ -278,20 +271,15 @@ describe('OrbitYouTube getComments', () => {
   })
 
   it('given fewer than 50 items, returns array of items', async () => {
-    axios.get.mockResolvedValueOnce({ data: { items: [...Array(5).keys()].fill({ snippet: { totalReplyCount: 0 } }) } })
+    axios.get.mockResolvedValueOnce(returnValueGenerator({ type: 'comments', items: 30 }))
     const comments = await sut.getComments('id')
-    expect(comments.length).toBe(5)
+    expect(comments.length).toBe(30)
   })
 
   it('given greater than 50 items, returns array of items', async () => {
     axios.get
-      .mockResolvedValueOnce({
-        data: {
-          items: [...Array(50).keys()].fill({ snippet: { totalReplyCount: 0 } }),
-          nextPageToken: '123'
-        }
-      })
-      .mockResolvedValueOnce({ data: { items: [...Array(20).keys()].fill({ snippet: { totalReplyCount: 0 } }) } })
+      .mockResolvedValueOnce(returnValueGenerator({ type: 'comments', items: 50, nextPage: true }))
+      .mockResolvedValueOnce(returnValueGenerator({ type: 'comments', items: 20 }))
     const comments = await sut.getComments('id')
     expect(comments.length).toBe(70)
   })
@@ -319,7 +307,11 @@ describe('OrbitYouTube getChannelComments', () => {
   })
 
   it('calls methods correctly', async () => {
-    mockReturnValues()
+    axios.get
+      .mockResolvedValueOnce(returnValueGenerator({ type: 'channels' }))
+      .mockResolvedValueOnce(returnValueGenerator({ type: 'videos', items: 2 }))
+      .mockResolvedValueOnce(returnValueGenerator({ type: 'comments', items: 0 }))
+      .mockResolvedValueOnce(returnValueGenerator({ type: 'comments', items: 0 }))
     jest.spyOn(sut, 'getChannelUploadPlaylistId')
     jest.spyOn(sut, 'getVideos')
     jest.spyOn(sut, 'getComments')
@@ -332,25 +324,39 @@ describe('OrbitYouTube getChannelComments', () => {
   })
 
   it('given options.log is true, log', async () => {
-    mockReturnValues()
+    axios.get
+      .mockResolvedValueOnce(returnValueGenerator({ type: 'channels' }))
+      .mockResolvedValueOnce(returnValueGenerator({ type: 'videos', items: 2 }))
+      .mockResolvedValueOnce(returnValueGenerator({ type: 'comments', items: 0 }))
+      .mockResolvedValueOnce(returnValueGenerator({ type: 'comments', items: 0 }))
     await sut.getChannelComments('channel', { log: true })
     expect(consoleSpy).toHaveBeenCalledTimes(3)
   })
 
   it('given options.log is false or absent, do not log', async () => {
-    mockReturnValues()
+    axios.get
+      .mockResolvedValueOnce(returnValueGenerator({ type: 'channels' }))
+      .mockResolvedValueOnce(returnValueGenerator({ type: 'videos', items: 1 }))
+      .mockResolvedValueOnce(returnValueGenerator({ type: 'comments', items: 0 }))
     await sut.getChannelComments('channel')
     expect(consoleSpy).toHaveBeenCalledTimes(0)
   })
 
   it('returns a single array', async () => {
-    mockReturnValues()
+    axios.get
+      .mockResolvedValueOnce(returnValueGenerator({ type: 'channels' }))
+      .mockResolvedValueOnce(returnValueGenerator({ type: 'videos', items: 2 }))
+      .mockResolvedValueOnce(returnValueGenerator({ type: 'comments', items: 0 }))
+      .mockResolvedValueOnce(returnValueGenerator({ type: 'comments', items: 0 }))
     const comments = await sut.getChannelComments('channel')
     expect(Array.isArray(comments)).toBe(true)
   })
 
   it('given no comments, returns empty array', async () => {
-    mockReturnValues(false)
+    axios.get
+      .mockResolvedValueOnce(returnValueGenerator({ type: 'channels' }))
+      .mockResolvedValueOnce(returnValueGenerator({ type: 'videos', items: 1 }))
+      .mockResolvedValueOnce(returnValueGenerator({ type: 'comments', items: 0 }))
     const comments = await sut.getChannelComments('channel')
     expect(comments.length).toBe(0)
   })
@@ -360,27 +366,63 @@ describe('OrbitYouTube getChannelComments', () => {
     axios.get.mockImplementationOnce(() => Promise.reject(error))
     await expect(sut.getChannelComments('id')).rejects.toThrow(error)
   })
-
-  function mockReturnValues(hasComments = true) {
-    const channels = {
-      data: {
-        items: [{ contentDetails: { relatedPlaylists: { uploads: 'value' } } }]
-      }
-    }
-    const videos = {
-      data: {
-        items: [
-          { snippet: { title: 'Video 1' }, contentDetails: { videoId: '123' } },
-          { snippet: { title: 'Video 2' }, contentDetails: { videoId: '123' } }
-        ]
-      }
-    }
-    let comments = { data: { items: [] } }
-    if (hasComments) comments = { data: { items: [{ snippet: {} }, { snippet: {} }] } }
-    axios.get
-      .mockResolvedValueOnce(channels)
-      .mockResolvedValueOnce(videos)
-      .mockResolvedValueOnce(comments)
-      .mockResolvedValueOnce(comments)
-  }
 })
+
+describe('OrbitYouTube filterComments', () => {
+  let sut
+  beforeEach(() => {
+    sut = new OrbitYouTube('1', '2', '3')
+  })
+  it('given missing params, throws', async () => {
+    await expect(sut.filterComments()).rejects.toThrow(/list/)
+    await expect(sut.filterComments([])).rejects.toThrow(/hours/)
+  })
+
+  it('given list is not an array, throws', async () => {
+    await expect(sut.filterComments(1)).rejects.toThrow(/array/)
+    await expect(sut.filterComments('string')).rejects.toThrow(/array/)
+    await expect(sut.filterComments(true)).rejects.toThrow(/array/)
+    await expect(sut.filterComments({})).rejects.toThrow(/array/)
+  })
+
+  it('given list of all new comments, return all', async () => {})
+
+  it('given a list of partially new comments, return only new ones', async () => {})
+
+  it('given a list of all old comments, return none', async () => {})
+})
+
+function returnValueGenerator(options) {
+  const { type, items, nextPage, itemsWithChildren, childComments, commentAge } = options
+  let r = { data: { items: [] } }
+
+  if (type == 'channels') {
+    r.data.items.push({ contentDetails: { relatedPlaylists: { uploads: 'value' } } })
+  }
+  if (type == 'videos') {
+    for (let i = 0; i < items; i++) {
+      r.data.items.push({ snippet: { title: `Video ${i + 1}` }, contentDetails: { videoId: '123' } })
+    }
+    if (nextPage) r.data.nextPageToken = 'next-page-token'
+  }
+  if (type == 'comments') {
+    for (let i = 0; i < items; i++) {
+      r.data.items.push({ snippet: { totalReplyCount: 0, topLevelComment: { snippet: {} } } })
+    }
+    for (let i = 0; i < itemsWithChildren; i++) {
+      r.data.items[i].snippet.totalReplyCount = childComments
+      r.data.items[i].replies = { comments: [] }
+      for (let j = 0; j < childComments; j++) {
+        r.data.items[i].replies.comments.push({})
+      }
+      if (commentAge) {
+        for (let i = 0; i < commentAge.length; i++) {
+          r.data.items[i].snippet.publishedAt = moment().subtract(commentAge[i], 'hours')
+        }
+      }
+    }
+    if (nextPage) r.data.nextPageToken = 'next-page-token'
+  }
+
+  return r
+}
