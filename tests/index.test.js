@@ -1,5 +1,6 @@
 const axios = require('axios')
 const qs = require('querystring')
+const moment = require('moment')
 const OrbitYouTube = require('../src/index')
 jest.mock('axios')
 
@@ -342,6 +343,15 @@ describe('OrbitYouTube getChannelComments', () => {
     expect(consoleSpy).toHaveBeenCalledTimes(0)
   })
 
+  it('given options.addTitle is true, addVideoTitle property', async () => {
+    axios.get
+      .mockResolvedValueOnce(returnValueGenerator({ type: 'channels' }))
+      .mockResolvedValueOnce(returnValueGenerator({ type: 'videos', items: 1 }))
+      .mockResolvedValueOnce(returnValueGenerator({ type: 'comments', items: 1 }))
+    const comments = await sut.getChannelComments('channel', { addTitle: true }) //?
+    expect(comments[0].snippet.addTitle).not.toBeNull()
+  })
+
   it('returns a single array', async () => {
     axios.get
       .mockResolvedValueOnce(returnValueGenerator({ type: 'channels' }))
@@ -373,6 +383,7 @@ describe('OrbitYouTube filterComments', () => {
   beforeEach(() => {
     sut = new OrbitYouTube('1', '2', '3')
   })
+
   it('given missing params, throws', async () => {
     await expect(sut.filterComments()).rejects.toThrow(/list/)
     await expect(sut.filterComments([])).rejects.toThrow(/hours/)
@@ -385,11 +396,27 @@ describe('OrbitYouTube filterComments', () => {
     await expect(sut.filterComments({})).rejects.toThrow(/array/)
   })
 
-  it('given list of all new comments, return all', async () => {})
+  it('given list of all new comments, return all', async () => {
+    axios.get.mockResolvedValueOnce(returnValueGenerator({ type: 'comments', items: 3, commentAge: [1, 1, 1] }))
+    const comments = await sut.getComments('1')
+    const filtered = await sut.filterComments(comments, 2)
+    expect(filtered.length).toBe(3)
+  })
 
-  it('given a list of partially new comments, return only new ones', async () => {})
+  it('given a list of partially new comments, return only new ones', async () => {
+    axios.get.mockResolvedValueOnce(returnValueGenerator({ type: 'comments', items: 3, commentAge: [1, 3, 1] }))
+    const comments = await sut.getComments('1')
+    const filtered = await sut.filterComments(comments, 2)
+    expect(filtered.length).toBe(2)
+  })
 
-  it('given a list of all old comments, return none', async () => {})
+  it('given a list of all old comments, return empty array', async () => {
+    axios.get.mockResolvedValueOnce(returnValueGenerator({ type: 'comments', items: 3, commentAge: [2, 2, 2] }))
+    const comments = await sut.getComments('1')
+    const filtered = await sut.filterComments(comments, 1)
+    expect(Array.isArray(filtered)).toBe(true)
+    expect(filtered.length).toBe(0)
+  })
 })
 
 function returnValueGenerator(options) {
@@ -415,10 +442,10 @@ function returnValueGenerator(options) {
       for (let j = 0; j < childComments; j++) {
         r.data.items[i].replies.comments.push({})
       }
-      if (commentAge) {
-        for (let i = 0; i < commentAge.length; i++) {
-          r.data.items[i].snippet.publishedAt = moment().subtract(commentAge[i], 'hours')
-        }
+    }
+    if (commentAge) {
+      for (let i = 0; i < commentAge.length; i++) {
+        r.data.items[i].snippet.publishedAt = moment().subtract(commentAge[i], 'hours').toISOString()
       }
     }
     if (nextPage) r.data.nextPageToken = 'next-page-token'

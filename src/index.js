@@ -156,7 +156,10 @@ class OrbitYouTube {
       if (options.log) console.log(`Found ${videos.length} videos`)
       let comments = []
       for (let video of videos) {
-        const videoComments = await this.getComments(video.contentDetails.videoId)
+        let videoComments = await this.getComments(video.contentDetails.videoId)
+        if (options.addTitle) {
+          videoComments = videoComments.map(c => ({ ...c, snippet: { ...c.snippet, videoTitle: video.snippet.title } }))
+        }
         comments = [...comments, ...videoComments]
         if (options.log) console.log(`Got comments for ${video.snippet.title}`)
       }
@@ -169,23 +172,53 @@ class OrbitYouTube {
   async filterComments(list, hours) {
     try {
       if (!list) throw 'You must provide a list of comments'
+      if (!Array.isArray(list)) throw 'list must be an array'
       if (!hours) throw 'You must provide a number of hours to include comments from'
-      return comments.filter(comment => moment().diff(moment(comment.publishedAt), 'hours') <= hours)
+      const filtered = list.filter(item => moment().diff(moment(item.snippet.publishedAt), 'hours') <= hours)
+      return filtered
     } catch (error) {
       throw new Error('filterComments error: ' + error)
     }
   }
 
   prepareComments(list) {
-    return new Promise(async (resolve, reject) => {
-      try {
-        const prepared = comments.prepare(list)
-        resolve(prepared)
-      } catch (error) {
-        reject(error)
+    return list.map(item => {
+      const { snippet } = item
+      return {
+        activity: {
+          description: snippet.textOriginal,
+          link: snippet.url,
+          link_text: 'See comment on YouTube',
+          title: `Commented on ${snippet.videoTitle}`,
+          tags: ['channel:youtube'],
+          activity_type: 'youtube:comment',
+          key: `youtube-comment-${snippet.id}`,
+          occurred_at: new Date(snippet.datePublished),
+          member: {
+            name: snippet.author.username
+          }
+        },
+        identity: {
+          source: 'YouTube',
+          source_host: 'youtube.com',
+          username: snippet.author.username,
+          url: snippet.author.channelUrl,
+          uid: snippet.author.channelId
+        }
       }
     })
   }
+
+  // prepareComments(list) {
+  //   return new Promise(async (resolve, reject) => {
+  //     try {
+  //       const prepared = comments.prepare(list)
+  //       resolve(prepared)
+  //     } catch (error) {
+  //       reject(error)
+  //     }
+  //   })
+  // }
 
   addActivities(activities) {
     return new Promise(async (resolve, reject) => {
