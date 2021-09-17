@@ -39,7 +39,7 @@ class OrbitYouTube {
       if (error.response) {
         throw new Error(`${error.response.status}: ${JSON.stringify(error.response.data)}`)
       } else {
-        throw new Error(error)
+        throw new Error('api() error: ' + error)
       }
     }
   }
@@ -52,7 +52,7 @@ class OrbitYouTube {
       const uploadsPlaylist = channelsList.items[0].contentDetails.relatedPlaylists.uploads
       return uploadsPlaylist
     } catch (error) {
-      throw new Error(error)
+      throw new Error('getChannelUploadPlaylistId error: ' + error)
     }
   }
 
@@ -64,7 +64,7 @@ class OrbitYouTube {
       const videos = await this.api('/playlistItems', query)
       return videos
     } catch (error) {
-      throw new Error(error)
+      throw new Error('getVideoPage error: ' + error)
     }
   }
 
@@ -85,7 +85,7 @@ class OrbitYouTube {
 
       return videos
     } catch (error) {
-      throw new Error(error)
+      throw new Error('getVideos error: ' + error)
     }
   }
 
@@ -118,7 +118,7 @@ class OrbitYouTube {
         nextPageToken: comments.nextPageToken
       }
     } catch (error) {
-      throw new Error(error)
+      throw new Error('getCommentPage error: ' + error)
     }
   }
 
@@ -139,7 +139,25 @@ class OrbitYouTube {
 
       return comments
     } catch (error) {
-      throw new Error(error)
+      throw new Error('getComments error: ' + error)
+    }
+  }
+
+  async getChannelComments(channelId, options = {}) {
+    try {
+      if (!channelId) throw 'You must provide a channelId'
+      const playlistId = await this.getChannelUploadPlaylistId(channelId)
+      const videos = await this.getVideos(playlistId)
+      if (options.log) console.log(`Found ${videos.length} videos`)
+      let comments = []
+      for (let video of videos) {
+        const videoComments = await this.getComments(video.contentDetails.videoId)
+        comments = [...comments, ...videoComments]
+        if (options.log) console.log(`Got comments for ${video.snippet.title}`)
+      }
+      return comments
+    } catch (error) {
+      throw new Error('getChannelComments error: ' + error)
     }
   }
 

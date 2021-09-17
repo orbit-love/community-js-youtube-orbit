@@ -5,7 +5,7 @@ jest.mock('axios')
 
 describe('OrbitYouTube constructor', () => {
   it('given all credentials, does not throw', () => {
-    const sut = new OrbitYouTube('1', '2', '3', '4')
+    const sut = new OrbitYouTube('1', '2', '3')
     expect(sut).not.toBeNull()
   })
 
@@ -88,7 +88,7 @@ describe('OrbitYouTube api', () => {
   })
 })
 
-describe('OrbitYouTube getChannel', () => {
+describe('OrbitYouTube getChannelUploadPlaylistId', () => {
   let sut
   beforeEach(() => {
     sut = new OrbitYouTube('1', '2', '3')
@@ -114,7 +114,7 @@ describe('OrbitYouTube getChannel', () => {
 describe('OrbitYouTube getVideoPage', () => {
   let sut
   beforeEach(() => {
-    sut = new OrbitYouTube('1', '2', '3', '4')
+    sut = new OrbitYouTube('1', '2', '3')
   })
 
   it('given no playlistId, throws', async () => {
@@ -164,7 +164,7 @@ describe('OrbitYouTube getVideoPage', () => {
 describe('OrbitYouTube getVideos', () => {
   let sut
   beforeEach(() => {
-    sut = new OrbitYouTube('1', '2', '3', '4')
+    sut = new OrbitYouTube('1', '2', '3')
   })
 
   it('given fewer than 50 items, returns array of items', async () => {
@@ -191,7 +191,7 @@ describe('OrbitYouTube getVideos', () => {
 describe('OrbitYouTube getCommentPage', () => {
   let sut
   beforeEach(() => {
-    sut = new OrbitYouTube('1', '2', '3', '4')
+    sut = new OrbitYouTube('1', '2', '3')
   })
 
   it('given no videoId, throws', async () => {
@@ -274,7 +274,7 @@ describe('OrbitYouTube getCommentPage', () => {
 describe('OrbitYouTube getComments', () => {
   let sut
   beforeEach(() => {
-    sut = new OrbitYouTube('1', '2', '3', '4')
+    sut = new OrbitYouTube('1', '2', '3')
   })
 
   it('given fewer than 50 items, returns array of items', async () => {
@@ -301,4 +301,86 @@ describe('OrbitYouTube getComments', () => {
     axios.get.mockImplementationOnce(() => Promise.reject(error))
     await expect(sut.getComments('id')).rejects.toThrow(error)
   })
+})
+
+describe('OrbitYouTube getChannelComments', () => {
+  let sut
+  let consoleSpy
+  beforeEach(() => {
+    sut = new OrbitYouTube('1', '2', '3')
+    consoleSpy = jest.spyOn(console, 'log')
+  })
+  afterEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('given no channelId, throws', async () => {
+    await expect(sut.getChannelComments()).rejects.toThrow(/channelId/)
+  })
+
+  it('calls methods correctly', async () => {
+    mockReturnValues()
+    jest.spyOn(sut, 'getChannelUploadPlaylistId')
+    jest.spyOn(sut, 'getVideos')
+    jest.spyOn(sut, 'getComments')
+
+    await sut.getChannelComments('channel')
+
+    expect(sut.getChannelUploadPlaylistId).toHaveBeenCalledTimes(1)
+    expect(sut.getVideos).toHaveBeenCalledTimes(1)
+    expect(sut.getComments).toHaveBeenCalledTimes(2)
+  })
+
+  it('given options.log is true, log', async () => {
+    mockReturnValues()
+    await sut.getChannelComments('channel', { log: true })
+    expect(consoleSpy).toHaveBeenCalledTimes(3)
+  })
+
+  it('given options.log is false or absent, do not log', async () => {
+    mockReturnValues()
+    await sut.getChannelComments('channel')
+    expect(consoleSpy).toHaveBeenCalledTimes(0)
+  })
+
+  it('returns a single array', async () => {
+    mockReturnValues()
+    const comments = await sut.getChannelComments('channel')
+    expect(Array.isArray(comments)).toBe(true)
+  })
+
+  it('given no comments, returns empty array', async () => {
+    mockReturnValues(false)
+    const comments = await sut.getChannelComments('channel')
+    expect(comments.length).toBe(0)
+  })
+
+  it('given an error, throws', async () => {
+    const error = 'Network error'
+    axios.get.mockImplementationOnce(() => Promise.reject(error))
+    await expect(sut.getChannelComments('id')).rejects.toThrow(error)
+  })
+
+  function mockReturnValues(hasComments = true) {
+    const channels = {
+      data: {
+        items: [{ contentDetails: { relatedPlaylists: { uploads: 'value' } } }]
+      }
+    }
+    const videos = {
+      data: {
+        items: [
+          { snippet: { title: 'Video 1' }, contentDetails: { videoId: '123' } },
+          { snippet: { title: 'Video 2' }, contentDetails: { videoId: '123' } }
+        ]
+      }
+    }
+    let comments = { data: { items: [] } }
+    if (hasComments) comments = { data: { items: [{ snippet: {} }, { snippet: {} }] } }
+    axios.get
+      .mockResolvedValueOnce(channels)
+      .mockResolvedValueOnce(videos)
+      .mockResolvedValueOnce(comments)
+      .mockResolvedValueOnce(comments)
+  }
 })
