@@ -1,4 +1,5 @@
 const axios = require('axios')
+const OrbitActivities = require('@orbit-love/activities')
 const qs = require('querystring')
 const moment = require('moment')
 const OrbitYouTube = require('../src/index')
@@ -348,7 +349,7 @@ describe('OrbitYouTube getChannelComments', () => {
       .mockResolvedValueOnce(returnValueGenerator({ type: 'channels' }))
       .mockResolvedValueOnce(returnValueGenerator({ type: 'videos', items: 1 }))
       .mockResolvedValueOnce(returnValueGenerator({ type: 'comments', items: 1 }))
-    const comments = await sut.getChannelComments('channel', { addTitle: true }) //?
+    const comments = await sut.getChannelComments('channel', { addTitle: true })
     expect(comments[0].snippet.addTitle).not.toBeNull()
   })
 
@@ -476,6 +477,67 @@ describe('OrbitYouTube prepareComments', () => {
     expect(prepared[1].activity.title).toBe('Commented on Video Title')
   })
 })
+
+describe('OrbitYouTube addActivities', () => {
+  let sut
+  let stats
+  beforeEach(() => {
+    sut = new OrbitYouTube('1', '2', '3')
+    stats = { added: 0, duplicates: 0, errors: [] }
+  })
+
+  afterEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('given no parameter, return correct object', async () => {
+    const result = await sut.addActivities()
+    expect(result).toMatchObject(stats)
+  })
+
+  it('given an empty array, return correct object', async () => {
+    const result = await sut.addActivities([])
+    expect(result).toMatchObject(stats)
+  })
+
+  it('given successful additions, return correct object', async () => {
+    // let person = new Person('Lorem', 'Ipsum');
+    // let spy = jest.spyOn(person, 'sayMyName').mockImplementation(() => 'Hello');
+    // OrbitActivities.createActivity.mockImplementationOnce(() => Promise.resolve({}))
+
+
+
+    // jest.spyOn(OrbitActivities, 'createActivity').mockImplementationOnce(() => Promise.resolve({}))
+
+
+    // const result = await sut.addActivities([{}])
+    // console.log(result)
+  })
+
+  it('given some duplicates, return correct object', async () => {
+
+  })
+
+  it('given all duplicates, return correct object', async () => {
+
+  })
+
+  it('given some errors, return correct object', async () => {
+
+  })
+
+  it('given an error, throws', async () => {
+    // const error = 'Network error'
+    // axios.get.mockImplementationOnce(() => Promise.reject(error))
+    // await expect(sut.getChannelComments('id')).rejects.toThrow(error)
+  })
+})
+
+// addActivities
+// get
+// prepare -> prepareComments
+// readme
+// increment & push
 
 function returnValueGenerator(options) {
   const { type, items, nextPage, itemsWithChildren, childComments, commentAge } = options

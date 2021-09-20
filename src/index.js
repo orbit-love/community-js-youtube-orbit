@@ -208,28 +208,28 @@ class OrbitYouTube {
     })
   }
 
-  addActivities(activities) {
-    return new Promise(async (resolve, reject) => {
-      try {
-        let stats = { added: 0, duplicates: 0, errors: [] }
-        for (let activity of activities) {
-          await this.orbit
-            .createActivity(activity)
-            .then(() => {
-              stats.added++
-            })
-            .catch(err => {
-              if (err.errors.key) stats.duplicates++
-              else {
-                errors.push(err)
-              }
-            })
-        }
-        resolve(stats)
-      } catch (error) {
-        reject(error)
+  async addActivities(activities = []) {
+    try {
+      let stats = { added: 0, duplicates: 0, errors: [] }
+      for (let activity of activities) {
+        await this.orbit
+          .createActivity(activity)
+          .then(() => {
+            stats.added++
+          })
+          .catch(error => {
+            if (error.errors) {
+              if (error.errors.key) stats.duplicates++
+              else stats.errors.push(error)
+            } else {
+              throw error
+            }
+          })
       }
-    })
+      return stats
+    } catch (error) {
+      throw new Error(error)
+    }
   }
 }
 
