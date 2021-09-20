@@ -480,56 +480,58 @@ describe('OrbitYouTube prepareComments', () => {
 
 describe('OrbitYouTube addActivities', () => {
   let sut
-  let stats
   beforeEach(() => {
     sut = new OrbitYouTube('1', '2', '3')
-    stats = { added: 0, duplicates: 0, errors: [] }
+    sut.orbit.createActivity = jest.fn()
   })
-
-  afterEach(() => {
+  afterAll(() => {
     jest.clearAllMocks()
   })
 
   it('given no parameter, return correct object', async () => {
     const result = await sut.addActivities()
-    expect(result).toMatchObject(stats)
+    expect(result).toMatchObject({ added: 0, duplicates: 0, errors: [] })
   })
 
   it('given an empty array, return correct object', async () => {
     const result = await sut.addActivities([])
-    expect(result).toMatchObject(stats)
+    expect(result).toMatchObject({ added: 0, duplicates: 0, errors: [] })
   })
 
   it('given successful additions, return correct object', async () => {
-    // let person = new Person('Lorem', 'Ipsum');
-    // let spy = jest.spyOn(person, 'sayMyName').mockImplementation(() => 'Hello');
-    // OrbitActivities.createActivity.mockImplementationOnce(() => Promise.resolve({}))
+    sut.orbit.createActivity
+      .mockImplementationOnce(() => Promise.resolve({}))
+      .mockImplementationOnce(() => Promise.resolve({}))
+    const result = await sut.addActivities([{}, {}])
 
-
-
-    // jest.spyOn(OrbitActivities, 'createActivity').mockImplementationOnce(() => Promise.resolve({}))
-
-
-    // const result = await sut.addActivities([{}])
-    // console.log(result)
+    expect(result).toMatchObject({ added: 2, duplicates: 0, errors: [] })
   })
 
   it('given some duplicates, return correct object', async () => {
+    sut.orbit.createActivity
+      .mockImplementationOnce(() => Promise.resolve({}))
+      .mockImplementationOnce(() => Promise.reject({ errors: { key: 'error message' } }))
+      .mockImplementationOnce(() => Promise.resolve({}))
+    const result = await sut.addActivities([{}, {}, {}])
 
-  })
-
-  it('given all duplicates, return correct object', async () => {
-
+    expect(result).toMatchObject({ added: 2, duplicates: 1, errors: [] })
   })
 
   it('given some errors, return correct object', async () => {
+    sut.orbit.createActivity
+      .mockImplementationOnce(() => Promise.resolve({}))
+      .mockImplementationOnce(() => Promise.reject({ errors: { notKey: 'error message' } }))
+      .mockImplementationOnce(() => Promise.resolve({}))
+    const result = await sut.addActivities([{}, {}, {}])
 
+    expect(result.added).toBe(2)
+    expect(result.errors.length).toBe(1)
   })
 
-  it('given an error, throws', async () => {
-    // const error = 'Network error'
-    // axios.get.mockImplementationOnce(() => Promise.reject(error))
-    // await expect(sut.getChannelComments('id')).rejects.toThrow(error)
+  it('given a non-API error, throws', async () => {
+    const error = 'Network error'
+    sut.orbit.createActivity.mockImplementationOnce(() => Promise.reject(error))
+    await expect(sut.addActivities([{}])).rejects.toThrow(error)
   })
 })
 
