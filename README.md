@@ -22,17 +22,6 @@ To set up this integration you will need some details from YouTube.
 3. Go to the Credentials area of your application and create an API Key. Take note of the API Key as it will only be shown once.
 4. Get your Channel's ID by [following these steps](https://support.google.com/youtube/answer/3250431).
 
-## Application Credentials
-
-The application requires the following environment variables:
-
-| Variable | Description | More Info
-|---|---|--|
-| `YOUTUBE_API_KEY` | Allows you to use the YouTube Data API | Follow the guide above
-| `YOUTUBE_CHANNEL_ID` | The ID of the channel you want to scan for comments | Follow the guide above
-| `ORBIT_API_KEY` | API key for Orbit | Found in `Account Settings` in your Orbit workspace
-| `ORBIT_WORKSPACE_ID` | ID for your Orbit workspace | Last part of the Orbit workspace URL, i.e. `https://app.orbit.love/my-workspace`, the ID is `my-workspace`
-
 ## Notes about quota
 
 Please take a moment to read the [quota usage](https://developers.google.com/youtube/v3/getting-started#quota) section of the YouTube Data API documentation. Per request this application:
@@ -57,26 +46,96 @@ Use the package with the following snippet.
 const OrbitYouTube = require('@orbit-love/youtube')
 const orbitYouTube = new OrbitYouTube()
 
-// Allows you to go back a number of hours and only get comments in that timeframe
-const videos = await orbitYouTube.getComments({ channelId: YOUTUBE_CHANNEL_ID, hours: 24 })
-const comments = await orbitYouTube.prepareComments(videos)
-const summary = await orbitYouTube.addActivities(comments)
-console.log(summary)
+const summary = addNewComments({ channelId: 'channel-id', hours: 24 })
+console.log(summary) // "{ added: 42, duplicates: 0, errors: [] }"
 ```
 
 The standard initialization of the library requires the following signature:
 
 ```js
 const OrbitYouTube = require('@orbit-love/youtube')
-const orbitYouTube = new OrbitYouTube('orbitWorkspaceId', 'orbitApiKey', 'ytApiKey', 'ytChannelId')
+const orbitYouTube = new OrbitYouTube('orbitWorkspaceId', 'orbitApiKey', 'ytApiKey')
 ```
 
-If you have the following environment variables set: `ORBIT_WORKSPACE_ID`, `ORBIT_API_KEY`, `YOUTUBE_API_KEY`, and `YOUTUBE_CHANNEL_ID` then you can initialize the client as follows:
+If you have the following environment variables set: `ORBIT_WORKSPACE_ID`, `ORBIT_API_KEY`, and `YOUTUBE_API_KEY` then you can initialize the client as follows:
 
 ```js
 const OrbitYouTube = require('@orbit-love/youtube')
 const orbitYouTube = new OrbitYouTube()
 ```
+
+### Methods
+
+#### `addNewComments([options])`
+
+Use this if you do not want to use provided methods and want the easiest way to add new YouTube comments to Orbit.
+
+|Property|Purpose|Options|Default|
+|---|---|---|---|
+|options.channelId|YouTube Channel ID|string||
+|options.hours|How many hours worth of comments to add|int||
+|options.log|Verbosely log progress|true, false|false|
+
+Returns Promise -> Object { added: int, duplicates: int, errors: [] }
+
+#### `getChannelUploadPlaylistId(channelId)`
+
+All of a channel's uploaded videos are in a hidden playlist. This method returns the ID of that playlist.
+
+Returns: Promise -> String
+
+#### `getVideoPage(playlistId, [pageToken])`
+
+Returns a single page of video results from the provided playlist. Also returns the `nextPageToken` if present.
+
+Returns Promise -> Object { items: [], nextPageToken?: 'token' }
+
+#### `getVideos(playlistId)`
+
+Loops over pages using `getVideoPage()` and returns a complete list of videos from the provided playlist.
+
+Returns Promise -> Array
+
+#### `getCommentPage(videoId, [pageToken])`
+
+Returns a single page of comment results from the provided video. Also returns the `nextPageToken` if present.
+
+Returns Promise -> Object { items: [], nextPageToken?: 'token' }
+
+#### `getComments(videoId)`
+
+Loops over pages using `getCommentPage()` and returns a complete list of comments from the provided video.
+
+Returns Promise -> Array
+
+#### `getChannelComments(channelId, [options])`
+
+Equivalent to calling `getChannelUploadPlaylistId()`, `getVideos()`, and `getComments()` for each video.
+
+|Property|Purpose|Options|Default|
+|---|---|---|---|
+|options.log|Verbosely log progress|true, false|false|
+|options.addTitle|Add video title to returned comment objects|true, false|false|
+
+Return Promise -> Array
+
+#### `filterComments(list, hours)`
+
+Given a list of comments, filters out any comments which are older than the specified hours.
+
+Returns Promise -> Array
+
+#### `prepareComments(list, [hours])`
+
+Given a list of comments, prepares objects as valid Orbit activities ready to be sent via the Orbit API. You may optionally provide hours and this function will run `filterComments()` on your behalf.
+
+Returns Promise -> Array
+
+#### `addActivities(list)`
+
+Sends the provided list of prepared activities to Orbit via the Orbit API. Duplicates will not be added to Orbit.
+
+Returns Promise -> Object { added: int, duplicates: int, errors: [] }
 
 ## CLI Usage
 

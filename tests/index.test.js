@@ -1,5 +1,4 @@
 const axios = require('axios')
-const OrbitActivities = require('@orbit-love/activities')
 const qs = require('querystring')
 const moment = require('moment')
 const OrbitYouTube = require('../src/index')
@@ -427,8 +426,8 @@ describe('OrbitYouTube prepareComments', () => {
   })
 
   it('if no list is provided or is empty, returns empty array', async () => {
-    const noParameter = sut.prepareComments()
-    const emptyArray = sut.prepareComments([])
+    const noParameter = await sut.prepareComments()
+    const emptyArray = await sut.prepareComments([])
 
     expect(Array.isArray(noParameter)).toBe(true)
     expect(Array.isArray(emptyArray)).toBe(true)
@@ -441,6 +440,14 @@ describe('OrbitYouTube prepareComments', () => {
     const comments = await sut.getComments('1')
     const prepared = await sut.prepareComments(comments)
     expect(prepared.length).toBe(3)
+  })
+
+  it('given hours parameter, returns filtered list', async () => {
+    axios.get.mockResolvedValueOnce(returnValueGenerator({ type: 'comments', items: 3, commentAge: [1, 3, 3] }))
+    const comments = await sut.getComments('1')
+    const prepared = await sut.prepareComments(comments, 2)
+    expect(Array.isArray(prepared)).toBe(true)
+    expect(prepared.length).toBe(1)
   })
 
   it('object is correctly formed', async () => {
@@ -471,7 +478,7 @@ describe('OrbitYouTube prepareComments', () => {
       }
     }
     const commentWithTitle = { ...comment, snippet: { ...comment.snippet, videoTitle: 'Video Title' } }
-    const prepared = sut.prepareComments([comment, commentWithTitle])
+    const prepared = await sut.prepareComments([comment, commentWithTitle])
 
     expect(prepared[0].activity.title).toBe('Commented on YouTube Video')
     expect(prepared[1].activity.title).toBe('Commented on Video Title')
@@ -535,11 +542,50 @@ describe('OrbitYouTube addActivities', () => {
   })
 })
 
-// addActivities
-// get
-// prepare -> prepareComments
-// readme
-// increment & push
+describe('OrbitYouTube addNewComments', () => {
+  let sut
+  beforeEach(() => {
+    sut = new OrbitYouTube('1', '2', '3')
+    sut.getChannelComments = jest.fn()
+    sut.prepareComments = jest.fn()
+    sut.addActivities = jest.fn()
+  })
+
+  it('given missing params, throws', async () => {
+    await expect(sut.addNewComments()).rejects.toThrow(/channelId/)
+    await expect(sut.addNewComments({})).rejects.toThrow(/channelId/)
+    await expect(sut.addNewComments({ hours: 1 })).rejects.toThrow(/channelId/)
+    await expect(sut.addNewComments({ channelId: 1 })).rejects.toThrow(/hours/)
+  })
+
+  it('given a string is passed as a parameter, throws', async () => {
+    await expect(sut.addNewComments('channel-id')).rejects.toThrow(/object/)
+  })
+
+  it('call methods with correct parameters', async () => {
+    mockCalls()
+    await sut.addNewComments({ channelId: '123', hours: 12, log: true })
+
+    expect(sut.getChannelComments).toHaveBeenCalledTimes(1)
+    expect(sut.getChannelComments).toHaveBeenCalledWith('123', { addTitle: true, log: true })
+    expect(sut.prepareComments).toHaveBeenCalledTimes(1)
+    expect(sut.prepareComments).toHaveBeenCalledWith([], 12)
+    expect(sut.addActivities).toHaveBeenCalledTimes(1)
+    expect(sut.addActivities).toHaveBeenCalledWith([])
+  })
+
+  it('given an error, throws', async () => {
+    const error = 'Network error'
+    sut.getChannelComments.mockImplementationOnce(() => Promise.reject(error))
+    await expect(sut.addNewComments({ channelId: '123', hours: 12, log: true })).rejects.toThrow(error)
+  })
+
+  function mockCalls() {
+    sut.getChannelComments.mockImplementationOnce(() => Promise.resolve([]))
+    sut.prepareComments.mockImplementationOnce(() => Promise.resolve([]))
+    sut.addActivities.mockImplementationOnce(() => Promise.resolve({ added: 0, duplicates: 0, errors: [] }))
+  }
+})
 
 function returnValueGenerator(options) {
   const { type, items, nextPage, itemsWithChildren, childComments, commentAge } = options

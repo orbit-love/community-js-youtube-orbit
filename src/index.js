@@ -181,8 +181,27 @@ class OrbitYouTube {
     }
   }
 
-  prepareComments(list = []) {
-    return list.map(item => {
+  async addNewComments(options = {}) {
+    try {
+      if (typeof options != 'object') throw new Error('options must be an object')
+      if (!options.channelId) throw new Error('You must provide options.channelId')
+      if (!options.hours) throw new Error('You must provide options.hours')
+
+      const query = { addTitle: true }
+      if (options.log) query.log = true
+
+      const comments = await this.getChannelComments(options.channelId, query)
+      const prepared = await this.prepareComments(comments, options.hours)
+      const results = await this.addActivities(prepared)
+      return results
+    } catch (error) {
+      throw new Error('addNewComments error: ' + error)
+    }
+  }
+
+  async prepareComments(list = [], hours = false) {
+    const filtered = hours ? await this.filterComments(list, hours) : list
+    return filtered.map(item => {
       const { snippet } = item
       return {
         activity: {
