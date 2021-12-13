@@ -167,7 +167,7 @@ To use the CLI you must have the following environment variables set: `ORBIT_WOR
 
 ## Performing a Historical Import
 
-You may want to perform a one-time historical import to fetch all your previous Reddit interactions and bring them into your Orbit workspace. To do so, set the hours tag to 720 for 30 days of import.
+You may want to perform a one-time historical import to fetch all your previous Youtube interactions and bring them into your Orbit workspace. To do so, set the hours tag to 720 for 30 days of import.
 
 ## Contributing
 
