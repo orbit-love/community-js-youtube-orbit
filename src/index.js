@@ -113,7 +113,7 @@ class OrbitYouTube {
 
       let replies = []
       for (let item of comments.items) {
-        if (item.snippet.totalReplyCount) {
+        if (item.snippet.totalReplyCount && item.hasOwnProperty("replies")) {
           replies = item.replies.comments
         }
       }
